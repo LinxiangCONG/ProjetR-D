@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HLS Video Player</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+        video {
+            width: 80%;
+            height: auto;
+            margin-top: 20px;
+            border: 1px solid #ccc;
+        }
+        .buttons {
+            margin-top: 20px;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>HLS Video Player</h1>
+    <video id="video" controls></video>
+    <div class="buttons">
+        <button onclick="switchQuality('1080p')">1080p</button>
+        <button onclick="switchQuality('720p')">720p</button>
+    </div>
+
+    <script>
+        const serverUrl = "http://192.168.181.151:5000"; // Flask 服务器地址
+        const videoElement = document.getElementById("video");
+        let hls;
+
+        // 初始化播放器
+        function initPlayer(sourceUrl, currentTime = 0) {
+            if (hls) {
+                hls.destroy(); // 销毁之前的 HLS 实例
+            }
+            hls = new Hls();
+            hls.loadSource(sourceUrl);
+            hls.attachMedia(videoElement);
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+		videoElement.currentTime = currentTime;
+		    videoElement.play().then(() => {
+        		console.log("Video is now playing automatically.");
+    		}).catch((error) => {
+        		console.error("Error while trying to play video:", error);
+    		});
+            });
+        }
+
+        // 切换视频质量
+        function switchQuality(quality) {
+	    const currentTime = videoElement.currentTime;
+            const requestData = { quality: quality, filename : "train" };
+            fetch(`${serverUrl}/IP`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.ip) {
+                    console.log(`Switching to ${quality}: ${data.ip}`);
+                    const ip = data.ip; // 假设 data.ip 是 192.168.60.12
+		     const port = 8080; // 端口号
+		     const hlsPath = "/hls/train_master.m3u8"; // 路径
+                    initPlayer(`http://${data.ip}:8080/hls/train_${quality}.m3u8`, currentTime); // 初始化播放器
+                } else {
+                    console.error("Invalid response from server:", data);
+                    alert("Failed to fetch HLS server URL!");
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching HLS server URL:", error);
+                alert("Error communicating with the server.");
+            });
+        }
+
+        // 默认加载 1080p 视频
+        window.onload = () => {
+            switchQuality("1080p");
+        };
+    </script>
+</body>
+</html>

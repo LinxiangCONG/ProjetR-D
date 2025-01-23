@@ -1,0 +1,7 @@
+# Let NetworkManager manage all devices on this system
+network:
+        ethernets:
+                ens34:
+                        addresses: [192.168.20.20/24]
+        version: 2
+        renderer: NetworkManager
